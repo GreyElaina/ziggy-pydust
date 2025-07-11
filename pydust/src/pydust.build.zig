@@ -304,6 +304,19 @@ fn getLibpython(allocator: std.mem.Allocator, python_exe: []const u8) ![]const u
         "import sysconfig; print(sysconfig.get_config_var('LDLIBRARY'), end='')",
     );
 
+    // Handle macOS Framework path (e.g., "Python.framework/Versions/3.13/Python")
+    if (std.mem.indexOf(u8, ldlibrary, "Python.framework") != null) {
+        // For macOS frameworks, we need to link against the dynamic library
+        // Get the Python version for the library name
+        const version = try getPythonOutput(
+            allocator,
+            python_exe,
+            "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}', end='')",
+        );
+        defer allocator.free(version);
+        return try std.fmt.allocPrint(allocator, "python{s}", .{version});
+    }
+
     var libname = ldlibrary;
 
     // Strip libpython3.11.a.so => python3.11.a.so
