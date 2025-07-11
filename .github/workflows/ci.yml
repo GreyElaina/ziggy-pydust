@@ -11,7 +11,6 @@ permissions:
   contents: write
 
 env:
-  POETRY_VERSION: "2.1.2"
   PYTHON_VERSION: "3.13"
 
 jobs:
@@ -27,53 +26,35 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Load cached Poetry installation
-        id: cached-poetry
-        uses: actions/cache@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          path: ~/.local
-          key: poetry-${{ runner.os }}-${{ env.POETRY_VERSION  }}-${{ steps.setup-python.outputs.python-version }}
-      - name: Install Poetry
-        id: install-poetry
-        if: steps.cached-poetry.outputs.cache-hit != 'true'
-        uses: snok/install-poetry@v1
-        # If changing any of these, you must comment out the if statement above.
-        with:
-          version: ${{ env.POETRY_VERSION }}
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-      - name: Poetry git plugin
-        run: poetry self add poetry-git-version-plugin
+          version: "latest"
 
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Set up Python
+        run: uv python install
 
-      - name: Poetry Install
-        run: poetry install -n -v
-      - name: Poetry Build
-        run: poetry build -v
+      - name: Install dependencies
+        run: uv sync --all-groups
+      - name: Build package
+        run: uv build
 
       - name: Ruff
-        run: poetry run ruff check .
+        run: uv run ruff check .
       - name: Black
-        run: poetry run ruff format --check .
+        run: uv run ruff format --check .
       - name: Run library tests
-        run: poetry run python -m ziglang build test
+        run: uv run python -m ziglang build test
       - name: Pytest
-        run: poetry run pytest
+        run: uv run pytest
       - name: Check generated stubs
-        run: poetry run python -m ziglang build --build-file pytest.build.zig generate-stubs -Dcheck-stubs=true
+        run: uv run python -m ziglang build --build-file pytest.build.zig generate-stubs -Dcheck-stubs=true
       - name: Zig Docs Build
-        run: poetry run python -m ziglang build docs
+        run: uv run python -m ziglang build docs
       - name: Setup doc deploy
         run: |
           git config --global user.name Docs Deploy
           git config --global user.email docs@dummy.bot.com
       - name: MKDocs Build
-        run: poetry run mike deploy develop --push
+        run: uv run mike deploy develop --push
         if: ${{ github.ref == 'refs/heads/develop' }}
