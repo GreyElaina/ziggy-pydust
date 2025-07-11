@@ -50,7 +50,7 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [tool.pdm.build]
-includes = ["pydust", "src"]
+includes = ["pydust", "pydust/src"]
 excludes = ["example"]
 
 [tool.pytest.ini_options]
