@@ -14,9 +14,9 @@ limitations under the License.
 
 import functools
 import importlib.metadata
+import tomllib
 from pathlib import Path
 
-import tomllib
 from pydantic import BaseModel, Field, model_validator
 
 
