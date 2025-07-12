@@ -297,7 +297,7 @@ fn getLibnameWindows(
     debug: bool,
     gil_disabled: bool,
 ) !PyLibName {
-    if (debug and version.isLessThan(Version.PY310)) {
+    if (debug and version.cmp(Version.PY310) < 0) {
         // CPython bug: linking against python3_d.dll raises error
         // https://github.com/python/cpython/issues/101614
         // return "python" ++ version.major ++ version.minor ++ "_d";  // => python{}{}_d
@@ -324,7 +324,7 @@ fn getLibnameWindows(
         return PyLibName.fromDynamic(name);
     }
     if (gil_disabled) {
-        if (version.isLessThan(Version.PY313)) @panic("Cannot compile C extensions for the free-threaded build on Python versions earlier than 3.13");
+        if (version.cmp(Version.PY313) < 0) @panic("Cannot compile C extensions for the free-threaded build on Python versions earlier than 3.13");
         const name = if (debug)
             try std.fmt.allocPrint(
                 allocator,
