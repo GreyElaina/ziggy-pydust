@@ -55,19 +55,18 @@ LIBDIR = get_config_var("LIBDIR")
 def safe_relpath(path):
     """Safely compute relative path, handling Windows cross-drive issues."""
     if path is None:
-        return None, False
+        return None
+
     try:
-        return os.path.relpath(path), False
+        return os.path.relpath(path)
     except ValueError:
         # On Windows, this can happen when paths are on different drives
         # Return the absolute path and a flag indicating it needs special handling
-        return path, True
+        return path
 
 
 if LIBDIR is not None:
-    LIBDIR, libdir_needs_cwd_relative = safe_relpath(get_config_var("LIBDIR"))
-else:
-    libdir_needs_cwd_relative = False
+    LIBDIR = safe_relpath(get_config_var("LIBDIR"))
 
 # macOS framework packages use shared linking
 FRAMEWORK = bool(get_config_var("PYTHONFRAMEWORK"))
@@ -78,18 +77,18 @@ SHARED = bool(get_config_var("Py_ENABLE_SHARED"))
 
 # Include directory for <Python.h>
 INCLUDE_DIR = get_path("include")
-include_dir_relpath, include_dir_needs_cwd_relative = safe_relpath(INCLUDE_DIR)
+include_dir_relpath = safe_relpath(INCLUDE_DIR)
 
 # Pydust python module location
 pydust_module_path = os.path.dirname(pydust.__file__)
 
 # Pydust root.zig
 pydust_root_zig_path = os.path.join(pydust_module_path, "src", "pydust.zig")
-pydust_root_zig, pydust_root_zig_needs_cwd_relative = safe_relpath(pydust_root_zig_path)
+pydust_root_zig = safe_relpath(pydust_root_zig_path)
 
 # Pydust ffi.h
 pydust_ffi_h_path = os.path.join(pydust_module_path, "src", "ffi.h")
-pydust_ffi_h, pydust_ffi_h_needs_cwd_relative = safe_relpath(pydust_ffi_h_path)
+pydust_ffi_h = safe_relpath(pydust_ffi_h_path)
 
 # GIL_DISABLED = get_config_var("Py_GIL_DISABLED") == 1 if get_config_var("Py_GIL_DISABLED") is not None else False
 GIL_DISABLED_DEF = get_config_var("Py_GIL_DISABLED")
@@ -117,13 +116,9 @@ print(
             "python_framework_prefix": FRAMEWORK_PREFIX,
             "ld_version": get_config_var("LDVERSION"),
             "libdir": LIBDIR,
-            "libdir_needs_cwd_relative": libdir_needs_cwd_relative,
             "include_dir": include_dir_relpath,
-            "include_dir_needs_cwd_relative": include_dir_needs_cwd_relative,
             "pydust_root_zig": pydust_root_zig,
-            "pydust_root_zig_needs_cwd_relative": pydust_root_zig_needs_cwd_relative,
             "pydust_ffi_h": pydust_ffi_h,
-            "pydust_ffi_h_needs_cwd_relative": pydust_ffi_h_needs_cwd_relative,
             "base_prefix": base_prefix,
             "executable": sys.executable,
             "calcsize_pointer": struct.calcsize("P"),
