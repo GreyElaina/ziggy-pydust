@@ -137,8 +137,8 @@ pub fn fromInterpreter(
     };
     if (interpreterEnvRun.term.Exited != 0) {
         std.debug.print("Sysconfig reveal script failed with exit code {}\n", .{interpreterEnvRun.term.Exited});
-        std.debug.print("Stdout: {s}", .{interpreterEnvRun.stdout});
-        std.debug.print("Stderr: {s}", .{interpreterEnvRun.stderr});
+        std.debug.print("Stdout: {s}\n", .{interpreterEnvRun.stdout});
+        std.debug.print("Stderr: {s}\n", .{interpreterEnvRun.stderr});
         @panic("Sysconfig reveal script returned non-zero exit code");
     }
     allocator.free(interpreterEnvRun.stderr);

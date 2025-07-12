@@ -73,6 +73,19 @@ pydust_root_zig = os.path.relpath(os.path.join(pydust_module_path, "src", "pydus
 # Pydust ffi.h
 pydust_ffi_h = os.path.relpath(os.path.join(pydust_module_path, "src", "ffi.h"))
 
+# GIL_DISABLED = get_config_var("Py_GIL_DISABLED") == 1 if get_config_var("Py_GIL_DISABLED") is not None else False
+GIL_DISABLED_DEF = get_config_var("Py_GIL_DISABLED")
+if GIL_DISABLED_DEF == 1:
+    GIL_DISABLED = True
+elif GIL_DISABLED_DEF == 0:
+    GIL_DISABLED = False
+elif GIL_DISABLED_DEF is None:
+    # If Py_GIL_DISABLED is not defined, assume GIL is enabled
+    GIL_DISABLED = False
+else:
+    print(f"Error: Py_GIL_DISABLED is not a valid value (expected 0 or 1), got {GIL_DISABLED_DEF}", file=sys.stderr)
+    sys.exit(-1)
+
 print(
     json.dumps(
         {
@@ -94,7 +107,7 @@ print(
             "calcsize_pointer": struct.calcsize("P"),
             "mingw": get_platform().startswith("mingw"),
             "ext_suffix": get_config_var("EXT_SUFFIX"),
-            "gil_disabled": get_config_var("Py_GIL_DISABLED") == 1,
+            "gil_disabled": GIL_DISABLED,
         }
     ),
     end="",
