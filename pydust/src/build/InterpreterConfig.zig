@@ -193,7 +193,7 @@ pub fn fromInterpreter(
 
     const libdir = if (builtin.os.tag == .windows) blk: {
         if (sysconfigEnv.base_prefix) |base_prefix| {
-            const name = std.mem.concat(allocator, u8, &.{ base_prefix, "\\libs" });
+            const name = std.mem.concat(allocator, u8, &.{ base_prefix, "\\libs" }) catch @panic("OOM");
             break :blk name;
         } else {
             break :blk null;
