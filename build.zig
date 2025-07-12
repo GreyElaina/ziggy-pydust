@@ -10,8 +10,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const builtin = @import("builtin");
 const std = @import("std");
+const builtin = @import("builtin");
+
+const LazyPath = std.Build.LazyPath;
 
 pub const build_pydust = @import("pydust/src/build/root.zig");
 const InterpreterConfig = build_pydust.InterpreterConfig;
@@ -33,17 +35,6 @@ pub fn build(b: *std.Build) void {
     };
     defer interpreter_config.deinit();
 
-    // Helper function to create LazyPath for potentially cross-drive paths on Windows
-    const createPath = struct {
-        fn call(builder: *std.Build, path_str: []const u8, needs_cwd_relative: bool) std.Build.LazyPath {
-            if (needs_cwd_relative) {
-                return std.Build.LazyPath { .cwd_relative = path_str };
-            } else {
-                return builder.path(path_str);
-            }
-        }
-    }.call;
-
     const translate_c = b.addTranslateC(.{
         .root_source_file = b.path("pydust/src/ffi.h"),
         .target = target,
@@ -52,11 +43,7 @@ pub fn build(b: *std.Build) void {
     if (abi3) {
         translate_c.defineCMacro("Py_LIMITED_API", "0x030D0000");
     }
-    translate_c.addIncludePath(createPath(
-        b,
-        interpreter_config.include_dir,
-        interpreter_config.sysconfigEnv.value.include_dir_needs_cwd_relative,
-    ));
+    translate_c.addIncludePath(LazyPath { .cwd_relative = interpreter_config.include_dir });
 
     const pyconf = b.addOptions();
     pyconf.addOption([:0]const u8, "module_name", "test");
@@ -90,23 +77,9 @@ pub fn build(b: *std.Build) void {
     });
     main_tests.linkLibC();
     main_tests.linkSystemLibrary(interpreter_config.libname.str());
-    main_tests.addIncludePath(createPath(
-        b,
-        interpreter_config.include_dir,
-        interpreter_config.sysconfigEnv.value.include_dir_needs_cwd_relative,
-    ));
-    if (interpreter_config.libdir) |libdir| {
-        main_tests.addLibraryPath(createPath(
-            b,
-            libdir,
-            interpreter_config.sysconfigEnv.value.libdir_needs_cwd_relative,
-        ));
-        main_tests.addRPath(createPath(
-            b,
-            libdir,
-            interpreter_config.sysconfigEnv.value.libdir_needs_cwd_relative,
-        ));
-    }
+    main_tests.addIncludePath(LazyPath { .cwd_relative = interpreter_config.include_dir });
+    main_tests.addLibraryPath(LazyPath { .cwd_relative = interpreter_config.libdir.? });
+    main_tests.addRPath(LazyPath { .cwd_relative = interpreter_config.libdir.? });
     // const main_tests_mod = b.createModule(.{ .root_source_file = b.path("./pyconf.dummy.zig") });
     // main_tests_mod.addIncludePath(b.path(interpreter_config.include_dir));
     main_tests.root_module.addImport("ffi", translate_c.createModule());
@@ -124,32 +97,15 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     example_lib.linkLibC();
-    example_lib.addIncludePath(createPath(
-        b,
-        interpreter_config.include_dir,
-        interpreter_config.sysconfigEnv.value.include_dir_needs_cwd_relative,
-    ));
+    example_lib.addIncludePath(LazyPath { .cwd_relative = interpreter_config.include_dir });
     example_lib.linkSystemLibrary(interpreter_config.libname.str());
-    if (interpreter_config.libdir) |libdir| {
-        example_lib.addRPath(createPath(
-            b,
-            libdir,
-            interpreter_config.sysconfigEnv.value.libdir_needs_cwd_relative,
-        ));
-    }
+    example_lib.addRPath(LazyPath { .cwd_relative = interpreter_config.libdir.? });
 
     const example_lib_mod = b.createModule(.{ .root_source_file = b.path("pydust/src/pydust.zig") });
-    example_lib_mod.addIncludePath(createPath(
-        b,
-        interpreter_config.include_dir,
-        interpreter_config.sysconfigEnv.value.include_dir_needs_cwd_relative,
-    ));
+    example_lib_mod.addIncludePath(LazyPath { .cwd_relative = interpreter_config.include_dir });
     example_lib.root_module.addImport("ffi", translate_c.createModule());
     example_lib.root_module.addImport("pydust", example_lib_mod);
-    example_lib.root_module.addImport(
-        "pyconf",
-        b.createModule(.{ .root_source_file = b.path("./pyconf.dummy.zig") }),
-    );
+    example_lib.root_module.addImport("pyconf", pyconf.createModule());
 
     // Option for emitting test binary based on the given root source.
     // This is used for debugging as in .vscode/tasks.json
