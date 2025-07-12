@@ -10,7 +10,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// This pyconf module is used during our own tests to represent the typically auto-generated pyconf module.
-pub const module_name = "test";
-pub const limited_api = true;
-pub const hexversion = "0x030D0000"; // 3.13
+.{
+    .name = .ziggy_pydust,
+    .version = "0.1.0",
+    .fingerprint = 0xb96e3d4615e317a0,
+    .minimum_zig_version = "0.14.1",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "pydust",
+    },
+}

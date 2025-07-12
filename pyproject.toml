@@ -1,5 +1,9 @@
 
 [project]
+name = "ziggy-pydust"
+version = "0.1.0"
+description = ""
+readme = "README.md"
 authors = [
     {name = "Nicholas Gates", email = "nick@fulcrum.so"},
 ]
@@ -11,16 +15,12 @@ dependencies = [
     "setuptools<81.0.0,>=80.0.0",
     "black<26.0.0,>=25.0.0",
 ]
-name = "ziggy-pydust"
-version = "0.1.0"
-description = ""
-readme = "README.md"
 
-[project.entry-points.pytest11]
-pydust = "pydust.pytest_plugin"
+# [project.entry-points.pytest11]
+# pydust = "pydust.pytest_plugin"
 
-[project.scripts]
-pydust = "pydust.__main__:main"
+# [project.scripts]
+# pydust = "pydust.__main__:main"
 
 [dependency-groups]
 dev = [
@@ -55,65 +55,3 @@ excludes = ["example"]
 
 [tool.pytest.ini_options]
 testpaths = ["test", "example"]
-
-# Out test modules
-
-[tool.pydust]
-root = "example/"
-build_zig = "pytest.build.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.args_types"
-root = "example/args_types.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.exceptions"
-root = "example/exceptions.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.hello"
-root = "example/hello.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.gil"
-root = "example/gil.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.memory"
-root = "example/memory.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.modules"
-root = "example/modules.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.pytest"
-root = "example/pytest.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.result_types"
-root = "example/result_types.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.functions"
-root = "example/functions.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.classes"
-root = "example/classes.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.buffers"
-root = "example/buffers.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.iterators"
-root = "example/iterators.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.operators"
-root = "example/operators.zig"
-
-[[tool.pydust.ext_module]]
-name = "example.code"
-root = "example/code.zig"

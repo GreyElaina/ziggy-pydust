@@ -13,27 +13,40 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
+pub const build_pydust = @import("pydust/src/build/root.zig");
+const InterpreterConfig = build_pydust.InterpreterConfig;
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const python_exe = b.option([]const u8, "python-exe", "Python executable to use") orelse "python";
+    const python_exe = b.option([]const u8, "python-exe", "Python executable to use") orelse "python3";
+    const abi3 = b.option(bool, "abi3", "Build with limited API (ABI3) support") orelse false;
 
-    const pythonInc = getPythonIncludePath(python_exe, b.allocator) catch @panic("Missing python");
-    const pythonLib = getPythonLibraryPath(python_exe, b.allocator) catch @panic("Missing python");
-    const pythonVer = getPythonLDVersion(python_exe, b.allocator) catch @panic("Missing python");
-    const pythonLibName = std.fmt.allocPrint(b.allocator, "python{s}", .{pythonVer}) catch @panic("Missing python");
-
+    const check_step = b.step("check", "Check errors");
     const test_step = b.step("test", "Run library tests");
     const docs_step = b.step("docs", "Generate docs");
+
+    const interpreter_config = InterpreterConfig.fromInterpreter(b.allocator, python_exe, abi3) catch |err| {
+        std.debug.print("Failed to get interpreter config: {}", .{err});
+        return;
+    };
+    defer interpreter_config.deinit();
 
     const translate_c = b.addTranslateC(.{
         .root_source_file = b.path("pydust/src/ffi.h"),
         .target = target,
         .optimize = optimize,
     });
-    translate_c.defineCMacro("Py_LIMITED_API", "0x030D0000");
-    translate_c.addIncludePath(.{ .cwd_relative = pythonInc });
+    if (abi3) {
+        translate_c.defineCMacro("Py_LIMITED_API", "0x030D0000");
+    }
+    translate_c.addIncludePath(b.path(interpreter_config.include_dir));
+
+    const pyconf = b.addOptions();
+    pyconf.addOption([:0]const u8, "module_name", "test");
+    pyconf.addOption(bool, "limited_api", abi3);
+    pyconf.addOption([]const u8, "hexversion", interpreter_config.hexversion);
 
     // We never build this lib, but we use it to generate docs.
     const pydust_lib = b.addSharedLibrary(.{
@@ -42,10 +55,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    const pydust_lib_mod = b.createModule(.{ .root_source_file = b.path("./pyconf.dummy.zig") });
-    pydust_lib_mod.addIncludePath(.{ .cwd_relative = pythonInc });
     pydust_lib.root_module.addImport("ffi", translate_c.createModule());
-    pydust_lib.root_module.addImport("pyconf", pydust_lib_mod);
+    pydust_lib.root_module.addImport("pyconf", pyconf.createModule());
+
+    check_step.dependOn(&pydust_lib.step);
 
     const pydust_docs = b.addInstallDirectory(.{
         .source_dir = pydust_lib.getEmittedDocs(),
@@ -61,13 +74,15 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     main_tests.linkLibC();
-    main_tests.addLibraryPath(.{ .cwd_relative = pythonLib });
-    main_tests.linkSystemLibrary(pythonLibName);
-    main_tests.addRPath(.{ .cwd_relative = pythonLib });
-    const main_tests_mod = b.createModule(.{ .root_source_file = b.path("./pyconf.dummy.zig") });
-    main_tests_mod.addIncludePath(.{ .cwd_relative = pythonInc });
+    main_tests.linkSystemLibrary(interpreter_config.libname.str());
+    main_tests.addIncludePath(b.path(interpreter_config.include_dir));
+    main_tests.addLibraryPath(b.path(interpreter_config.libdir.?));
+    main_tests.addRPath(b.path(interpreter_config.libdir.?));
+    // const main_tests_mod = b.createModule(.{ .root_source_file = b.path("./pyconf.dummy.zig") });
+    // main_tests_mod.addIncludePath(b.path(interpreter_config.include_dir));
     main_tests.root_module.addImport("ffi", translate_c.createModule());
-    main_tests.root_module.addImport("pyconf", main_tests_mod);
+    main_tests.root_module.addImport("pyconf", pyconf.createModule());
+    // main_tests.root_module.addImport("pydust", pydust_lib.root_module);
 
     const run_main_tests = b.addRunArtifact(main_tests);
     test_step.dependOn(&run_main_tests.step);
@@ -80,11 +95,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     example_lib.linkLibC();
-    example_lib.addLibraryPath(.{ .cwd_relative = pythonLib });
-    example_lib.linkSystemLibrary(pythonLibName);
-    example_lib.addRPath(.{ .cwd_relative = pythonLib });
+    example_lib.addIncludePath(b.path(interpreter_config.include_dir));
+    example_lib.linkSystemLibrary(interpreter_config.libname.str());
+    example_lib.addRPath(b.path(interpreter_config.libdir.?));
+
     const example_lib_mod = b.createModule(.{ .root_source_file = b.path("pydust/src/pydust.zig") });
-    example_lib_mod.addIncludePath(.{ .cwd_relative = pythonInc });
+    example_lib_mod.addIncludePath(b.path(interpreter_config.include_dir));
     example_lib.root_module.addImport("ffi", translate_c.createModule());
     example_lib.root_module.addImport("pydust", example_lib_mod);
     example_lib.root_module.addImport(
@@ -101,35 +117,3 @@ pub fn build(b: *std.Build) void {
         b.getInstallStep().dependOn(&test_bin_install.step);
     }
 }
-
-fn getPythonIncludePath(
-    python_exe: []const u8,
-    allocator: std.mem.Allocator,
-) ![]const u8 {
-    const includeResult = try runProcess(.{
-        .allocator = allocator,
-        .argv = &.{ python_exe, "-c", "import sysconfig; print(sysconfig.get_path('include'), end='')" },
-    });
-    defer allocator.free(includeResult.stderr);
-    return includeResult.stdout;
-}
-
-fn getPythonLibraryPath(python_exe: []const u8, allocator: std.mem.Allocator) ![]const u8 {
-    const includeResult = try runProcess(.{
-        .allocator = allocator,
-        .argv = &.{ python_exe, "-c", "import sysconfig; print(sysconfig.get_config_var('LIBDIR'), end='')" },
-    });
-    defer allocator.free(includeResult.stderr);
-    return includeResult.stdout;
-}
-
-fn getPythonLDVersion(python_exe: []const u8, allocator: std.mem.Allocator) ![]const u8 {
-    const includeResult = try runProcess(.{
-        .allocator = allocator,
-        .argv = &.{ python_exe, "-c", "import sysconfig; print(sysconfig.get_config_var('LDVERSION'), end='')" },
-    });
-    defer allocator.free(includeResult.stderr);
-    return includeResult.stdout;
-}
-
-const runProcess = if (builtin.zig_version.minor >= 12) std.process.Child.run else std.process.Child.exec;
