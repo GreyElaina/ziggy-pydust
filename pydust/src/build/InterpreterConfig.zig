@@ -132,7 +132,7 @@ pub fn fromInterpreter(
     abi3: bool,
 ) !Self {
     const interpreterEnvRun = runPythonScript(allocator, python_exe, sysconfigRevealScript) catch |e| {
-        std.debug.print("Failed to run sysconfig reveal script: {s}, using python_exe={s}\n", .{@errorName(e), python_exe});
+        std.debug.print("Failed to run sysconfig reveal script: {s}, using python_exe={s}\n", .{ @errorName(e), python_exe });
         @panic("Failed to run sysconfig reveal script");
     };
     if (interpreterEnvRun.term.Exited != 0) {
@@ -192,7 +192,12 @@ pub fn fromInterpreter(
         @panic("Unsupported OS for Python interpreter configuration");
 
     const libdir = if (builtin.os.tag == .windows) blk: {
-        break :blk if (sysconfigEnv.base_prefix) |base_prefix| base_prefix ++ "\\libs" else null;
+        if (sysconfigEnv.base_prefix) |base_prefix| {
+            const name = std.mem.concat(allocator, u8, &.{ base_prefix, "\\libs" });
+            break :blk name;
+        } else {
+            break :blk null;
+        }
     } else if (builtin.os.tag == .linux or builtin.os.tag == .macos) blk: {
         break :blk sysconfigEnv.libdir;
     } else @panic("Unsupported OS for Python interpreter configuration");
