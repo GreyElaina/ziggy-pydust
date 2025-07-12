@@ -94,7 +94,7 @@ print(
             "calcsize_pointer": struct.calcsize("P"),
             "mingw": get_platform().startswith("mingw"),
             "ext_suffix": get_config_var("EXT_SUFFIX"),
-            "gil_disabled": get_config_var("Py_GIL_DISABLED") != 0,
+            "gil_disabled": get_config_var("Py_GIL_DISABLED") == 1,
         }
     ),
     end="",
