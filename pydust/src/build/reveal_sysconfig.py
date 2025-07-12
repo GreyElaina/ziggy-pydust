@@ -51,6 +51,7 @@ WINDOWS = platform.system() == "Windows"
 
 LIBDIR = get_config_var("LIBDIR")
 
+
 def safe_relpath(path):
     """Safely compute relative path, handling Windows cross-drive issues."""
     if path is None:
@@ -61,6 +62,7 @@ def safe_relpath(path):
         # On Windows, this can happen when paths are on different drives
         # Return the absolute path and a flag indicating it needs special handling
         return path, True
+
 
 if LIBDIR is not None:
     LIBDIR, libdir_needs_cwd_relative = safe_relpath(get_config_var("LIBDIR"))
