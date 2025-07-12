@@ -206,7 +206,7 @@ fn pyModuleDestRelPath(self: Self, allocator: std.mem.Allocator, options: PyModu
 }
 
 fn libtestDestRelPath(allocator: std.mem.Allocator, options: PyModuleOptions) ![]const u8 {
-    return try std.mem.concat(allocator, u8, &[_][]const u8{
+    return try std.mem.concat(allocator, u8, &.{
         options.name,
         ".test.bin",
     });
