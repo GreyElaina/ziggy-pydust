@@ -49,6 +49,11 @@ else:
 # Windows always uses shared linking
 WINDOWS = platform.system() == "Windows"
 
+LIBDIR = get_config_var("LIBDIR")
+
+if LIBDIR is not None:
+    LIBDIR = os.path.relpath(get_config_var("LIBDIR"))
+
 # macOS framework packages use shared linking
 FRAMEWORK = bool(get_config_var("PYTHONFRAMEWORK"))
 FRAMEWORK_PREFIX = get_config_var("PYTHONFRAMEWORKPREFIX")
@@ -80,7 +85,7 @@ print(
             "shared": PYPY or GRAALPY or ANACONDA or WINDOWS or FRAMEWORK or SHARED,
             "python_framework_prefix": FRAMEWORK_PREFIX,
             "ld_version": get_config_var("LDVERSION"),
-            "libdir": os.path.relpath(get_config_var("LIBDIR")),
+            "libdir": LIBDIR,
             "include_dir": os.path.relpath(INCLUDE_DIR),
             "pydust_root_zig": pydust_root_zig,
             "pydust_ffi_h": pydust_ffi_h,
