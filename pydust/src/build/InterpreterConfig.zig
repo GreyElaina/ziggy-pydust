@@ -111,6 +111,7 @@ const SysconfigEnv = struct {
     python_framework_prefix: ?[]const u8,
     ld_version: ?[]const u8,
     libdir: ?[]const u8,
+    libdir_needs_cwd_relative: bool = false,
     base_prefix: ?[]const u8,
     executable: []const u8,
     calcsize_pointer: u8,
@@ -118,12 +119,15 @@ const SysconfigEnv = struct {
     ext_suffix: ?[]const u8,
     gil_disabled: bool,
     include_dir: []const u8,
+    include_dir_needs_cwd_relative: bool = false,
 
     /// Relative path to pydust/src/pydust.zig
     pydust_root_zig: []const u8,
+    pydust_root_zig_needs_cwd_relative: bool = false,
 
     /// Relative path to pydust/src/ffi.h
     pydust_ffi_h: []const u8,
+    pydust_ffi_h_needs_cwd_relative: bool = false,
 };
 
 pub fn fromInterpreter(
