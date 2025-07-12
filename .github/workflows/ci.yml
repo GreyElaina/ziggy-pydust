@@ -53,7 +53,7 @@ jobs:
         run: pdm run ruff format --check .
 
       - name: Run library tests
-        run: pdm run python -m ziglang build test
+        run: pdm run python -m ziglang build test -Dabi3=true
       # - name: Pytest
       #   run: pdm run pytest
       # - name: Check generated stubs
