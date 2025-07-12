@@ -103,16 +103,16 @@ pub fn addPythonModule(self: *Self, options: PyModuleOptions) PyModule {
     pyconf.addOption([]const u8, "hexversion", self.interpreter_config.hexversion);
 
     const translate_c = self.addTranslateC(options);
-    translate_c.addIncludePath(LazyPath { .cwd_relative = self.interpreter_config.include_dir });
+    translate_c.addIncludePath(LazyPath{ .cwd_relative = self.interpreter_config.include_dir });
 
     const pydust = b.createModule(.{
-        .root_source_file = LazyPath { .cwd_relative = self.interpreter_config.pydust_root_zig },
+        .root_source_file = LazyPath{ .cwd_relative = self.interpreter_config.pydust_root_zig },
         .imports = &.{
             .{ .name = "pyconf", .module = pyconf.createModule() },
             .{ .name = "ffi", .module = translate_c.createModule() },
         },
     });
-    pydust.addIncludePath(LazyPath { .cwd_relative = self.interpreter_config.include_dir });
+    pydust.addIncludePath(LazyPath{ .cwd_relative = self.interpreter_config.include_dir });
 
     const py_module = b.addSharedLibrary(.{
         .name = short_name,
@@ -134,14 +134,14 @@ pub fn addPythonModule(self: *Self, options: PyModuleOptions) PyModule {
 
     // Test step
     const libtest_mod = b.createModule(.{
-        .root_source_file = LazyPath { .cwd_relative = self.interpreter_config.pydust_root_zig },
+        .root_source_file = LazyPath{ .cwd_relative = self.interpreter_config.pydust_root_zig },
         .imports = &.{
             .{ .name = "pyconf", .module = pyconf.createModule() },
             .{ .name = "ffi", .module = translate_c.createModule() },
         },
     });
-    libtest_mod.addIncludePath(LazyPath { .cwd_relative = self.interpreter_config.include_dir });
-    
+    libtest_mod.addIncludePath(LazyPath{ .cwd_relative = self.interpreter_config.include_dir });
+
     const libtest = b.addTest(.{
         .root_source_file = options.root_source_file,
         .target = b.resolveTargetQuery(options.target),
@@ -151,8 +151,8 @@ pub fn addPythonModule(self: *Self, options: PyModuleOptions) PyModule {
     libtest.root_module.addImport("pydust", libtest_mod);
     libtest.linkLibC();
     libtest.linkSystemLibrary(self.interpreter_config.libname.str());
-    libtest.addLibraryPath(LazyPath { .cwd_relative = self.interpreter_config.libdir.? });
-    libtest.addRPath(LazyPath { .cwd_relative = self.interpreter_config.libdir.? }); // Anaconda compat
+    libtest.addLibraryPath(LazyPath{ .cwd_relative = self.interpreter_config.libdir.? });
+    libtest.addRPath(LazyPath{ .cwd_relative = self.interpreter_config.libdir.? }); // Anaconda compat
 
     const install_libtest = b.addInstallBinFile(
         libtest.getEmittedBin(),
@@ -174,7 +174,7 @@ pub fn addPythonModule(self: *Self, options: PyModuleOptions) PyModule {
 fn addTranslateC(self: Self, options: PyModuleOptions) *std.Build.Step.TranslateC {
     const b = self.owner;
     const translate_c = b.addTranslateC(.{
-        .root_source_file = LazyPath { .cwd_relative = self.interpreter_config.pydust_ffi_h },
+        .root_source_file = LazyPath{ .cwd_relative = self.interpreter_config.pydust_ffi_h },
         .target = b.resolveTargetQuery(options.target),
         .optimize = options.optimize,
     });

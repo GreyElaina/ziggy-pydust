@@ -11,28 +11,19 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13"]
-    runs-on: ${{ matrix.os }}
+  lint:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # Needed for docs to discover gh-pages branch
-          fetch-depth: 0
 
       - uses: actions/setup-python@v5
-        id: setup-python
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
 
       - name: Install PDM
         uses: pdm-project/setup-pdm@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -52,22 +43,76 @@ jobs:
       - name: Ruff Format
         run: pdm run ruff format --check .
 
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install PDM
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Configure use-uv
+        run: pdm config use_uv true
+
+      - name: Install dependencies (Dev)
+        run: pdm install -d
+
       - name: Run library tests
         run: pdm run python -m ziglang build test -Dabi3=true
       # - name: Pytest
       #   run: pdm run pytest
       # - name: Check generated stubs
       #   run: pdm run python -m ziglang build --build-file pytest.build.zig generate-stubs -Dcheck-stubs=true
+
+  docs:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: ${{ github.ref == 'refs/heads/develop' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Needed for docs to discover gh-pages branch
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install PDM
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Configure use-uv
+        run: pdm config use_uv true
+
+      - name: Install dependencies (Dev)
+        run: pdm install -d
+
       - name: Zig Docs Build
         run: pdm run python -m ziglang build docs
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' }}
 
       - name: Setup doc deploy
         run: |
           git config --global user.name Docs Deploy
           git config --global user.email docs@dummy.bot.com
-        if: ${{ github.ref == 'refs/heads/develop' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' }}
 
       - name: MKDocs Build
         run: pdm run mike deploy develop --push
-        if: ${{ github.ref == 'refs/heads/develop' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' }}

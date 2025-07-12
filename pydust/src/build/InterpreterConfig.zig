@@ -184,7 +184,7 @@ pub fn fromInterpreter(
         implementation,
         abi3,
         sysconfigEnv.mingw,
-        sysconfigEnv.shared and !sysconfigEnv.gil_disabled,
+        if (sysconfigEnv.ext_suffix) |ext_suffix| std.mem.startsWith(u8, ext_suffix, "_d.") else false,
         sysconfigEnv.gil_disabled,
     ) else if (builtin.os.tag == .linux or builtin.os.tag == .macos)
         try PyLibName.getUnix(
