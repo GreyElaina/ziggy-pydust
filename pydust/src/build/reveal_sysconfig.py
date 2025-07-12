@@ -14,14 +14,14 @@ limitations under the License.
 
 # Originally from pyo3-build-config
 
+import json
 import os.path
 import platform
 import struct
-import json
 import sys
-import pydust
-from sysconfig import get_config_var, get_platform, get_path
+from sysconfig import get_config_var, get_path, get_platform
 
+import pydust
 
 PYPY = platform.python_implementation() == "PyPy"
 GRAALPY = platform.python_implementation() == "GraalVM"
@@ -30,7 +30,7 @@ GRAALPY_MAJOR = None
 GRAALPY_MINOR = None
 
 if GRAALPY:
-    graalpy_ver = map(int, __graalpython__.get_graalvm_version().split('.'))  # type: ignore
+    graalpy_ver = map(int, __graalpython__.get_graalvm_version().split("."))  # type: ignore  # noqa: F821
     GRAALPY_MAJOR = next(graalpy_ver)
     GRAALPY_MINOR = next(graalpy_ver)
 
@@ -68,28 +68,29 @@ pydust_root_zig = os.path.relpath(os.path.join(pydust_module_path, "src", "pydus
 # Pydust ffi.h
 pydust_ffi_h = os.path.relpath(os.path.join(pydust_module_path, "src", "ffi.h"))
 
-print(json.dumps({
-    "implementation": platform.python_implementation(),
-    "version_major": sys.version_info[0],
-    "version_minor": sys.version_info[1],
-    "hexversion": f"{sys.hexversion:#010x}",
-    "graalpy_major": GRAALPY_MAJOR,
-    "graalpy_minor": GRAALPY_MINOR,
-    "shared": PYPY or GRAALPY or ANACONDA or WINDOWS or FRAMEWORK or SHARED,
-    
-    "python_framework_prefix": FRAMEWORK_PREFIX,
-    "ld_version": get_config_var("LDVERSION"),
-    
-    "libdir": os.path.relpath(get_config_var("LIBDIR")),
-    "include_dir": os.path.relpath(INCLUDE_DIR),
-    
-    "pydust_root_zig": pydust_root_zig,
-    "pydust_ffi_h": pydust_ffi_h,
-    
-    "base_prefix": base_prefix,
-    "executable": sys.executable,
-    "calcsize_pointer": struct.calcsize("P"),
-    "mingw": get_platform().startswith("mingw"),
-    "ext_suffix": get_config_var("EXT_SUFFIX"),
-    "gil_disabled": get_config_var("Py_GIL_DISABLED") != 0,
-}), end="")
+print(
+    json.dumps(
+        {
+            "implementation": platform.python_implementation(),
+            "version_major": sys.version_info[0],
+            "version_minor": sys.version_info[1],
+            "hexversion": f"{sys.hexversion:#010x}",
+            "graalpy_major": GRAALPY_MAJOR,
+            "graalpy_minor": GRAALPY_MINOR,
+            "shared": PYPY or GRAALPY or ANACONDA or WINDOWS or FRAMEWORK or SHARED,
+            "python_framework_prefix": FRAMEWORK_PREFIX,
+            "ld_version": get_config_var("LDVERSION"),
+            "libdir": os.path.relpath(get_config_var("LIBDIR")),
+            "include_dir": os.path.relpath(INCLUDE_DIR),
+            "pydust_root_zig": pydust_root_zig,
+            "pydust_ffi_h": pydust_ffi_h,
+            "base_prefix": base_prefix,
+            "executable": sys.executable,
+            "calcsize_pointer": struct.calcsize("P"),
+            "mingw": get_platform().startswith("mingw"),
+            "ext_suffix": get_config_var("EXT_SUFFIX"),
+            "gil_disabled": get_config_var("Py_GIL_DISABLED") != 0,
+        }
+    ),
+    end="",
+)
