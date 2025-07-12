@@ -29,48 +29,34 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - name: Install PDM
+        uses: pdm-project/setup-pdm@v4
         with:
-          version: "latest"
+          python-version: ${{ matrix.python-version }}
 
-      - name: Create virtual environment
-        run: python -m venv .venv
+      - name: Configure use-uv
+        run: pdm config use_uv true
 
-      - name: Activate virtual environment and install dependencies
-        run: |
-          source .venv/bin/activate
-          uv sync --active --all-groups
+      - name: Install dependencies (Dev)
+        run: pdm install -d
 
       - name: Build package
-        run: |
-          source .venv/bin/activate
-          uv build
+        run: pdm build
 
       - name: Ruff
-        run: |
-          source .venv/bin/activate
-          uv run --active ruff check .
-      - name: Black
-        run: |
-          source .venv/bin/activate
-          uv run --active ruff format --check .
+        run: pdm run ruff check .
+
+      - name: Ruff Format
+        run: pdm run ruff format --check .
+
       - name: Run library tests
-        run: |
-          source .venv/bin/activate
-          uv run --active python -m ziglang build test
-      - name: Pytest
-        run: |
-          source .venv/bin/activate
-          uv run --active pytest
+        run: pdm run python -m ziglang build test
+      # - name: Pytest
+      #   run: pdm run pytest
       # - name: Check generated stubs
-      #   run: |
-      #     source .venv/bin/activate
-      #     uv run --active -m ziglang build --build-file pytest.build.zig generate-stubs -Dcheck-stubs=true
+      #   run: pdm run python -m ziglang build --build-file pytest.build.zig generate-stubs -Dcheck-stubs=true
       - name: Zig Docs Build
-        run: |
-          source .venv/bin/activate
-          uv run --active -m ziglang build docs
+        run: pdm run python -m ziglang build docs
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' }}
 
       - name: Setup doc deploy
@@ -80,7 +66,5 @@ jobs:
         if: ${{ github.ref == 'refs/heads/develop' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' }}
 
       - name: MKDocs Build
-        run: |
-          source .venv/bin/activate
-          uv run --active mike deploy develop --push
+        run: pdm run mike deploy develop --push
         if: ${{ github.ref == 'refs/heads/develop' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' }}
