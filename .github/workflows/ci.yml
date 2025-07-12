@@ -43,7 +43,8 @@ jobs:
       - name: Ruff Format
         run: pdm run ruff format --check .
 
-  test:
+
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -71,12 +72,43 @@ jobs:
       - name: Install dependencies (Dev)
         run: pdm install -d
 
-      - name: Run library tests
-        run: pdm run python -m ziglang build test -Dabi3=true
+      - name: Run build tests
+        run: pdm run python -m ziglang build test
       # - name: Pytest
       #   run: pdm run pytest
       # - name: Check generated stubs
       #   run: pdm run python -m ziglang build --build-file pytest.build.zig generate-stubs -Dcheck-stubs=true
+
+  build-abi3:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install PDM
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Configure use-uv
+        run: pdm config use_uv true
+
+      - name: Install dependencies (Dev)
+        run: pdm install -d
+
+      - name: Run build tests (abi3)
+        run: pdm run python -m ziglang build test -Dabi3=true
 
   docs:
     runs-on: ubuntu-latest
