@@ -15,8 +15,8 @@ const builtin = @import("builtin");
 
 const LazyPath = std.Build.LazyPath;
 
-pub const build_pydust = @import("pydust/src/build/root.zig");
-const InterpreterConfig = build_pydust.InterpreterConfig;
+pub const pybuild = @import("pydust/src/build/root.zig");
+const InterpreterConfig = pybuild.InterpreterConfig;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
