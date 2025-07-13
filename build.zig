@@ -69,21 +69,20 @@ pub fn build(b: *std.Build) void {
     });
     docs_step.dependOn(&pydust_docs.step);
 
+    const test_filters = b.option([]const u8, "test-filter", "Skip tests that do not match any filter");
     const main_tests = b.addTest(.{
         .root_source_file = b.path("pydust/src/pydust.zig"),
         .target = target,
         .optimize = optimize,
+        .filter = test_filters
     });
     main_tests.linkLibC();
     main_tests.linkSystemLibrary(interpreter_config.libname.str());
     main_tests.addIncludePath(LazyPath { .cwd_relative = interpreter_config.include_dir });
     main_tests.addLibraryPath(LazyPath { .cwd_relative = interpreter_config.libdir.? });
     main_tests.addRPath(LazyPath { .cwd_relative = interpreter_config.libdir.? });
-    // const main_tests_mod = b.createModule(.{ .root_source_file = b.path("./pyconf.dummy.zig") });
-    // main_tests_mod.addIncludePath(b.path(interpreter_config.include_dir));
     main_tests.root_module.addImport("ffi", translate_c.createModule());
     main_tests.root_module.addImport("pyconf", pyconf.createModule());
-    // main_tests.root_module.addImport("pydust", pydust_lib.root_module);
 
     check_step.dependOn(&main_tests.step);
 
