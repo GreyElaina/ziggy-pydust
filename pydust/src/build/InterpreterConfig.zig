@@ -169,10 +169,10 @@ pub fn fromInterpreter(
     };
     const implementation = try Implementation.parse(sysconfigEnv.implementation);
 
-    if (!python_version.isSupportedPython()) {
-        std.debug.print("Unsupported Python version: {}.{}. Minimum supported version is {}.{}\n", .{ sysconfigEnv.version_major, sysconfigEnv.version_minor, Version.MINIMUM_SUPPORTED_VERSION_PYTHON.major, Version.MINIMUM_SUPPORTED_VERSION_PYTHON.minor });
-        @panic("Unsupported Python version");
-    }
+    // if (!python_version.isSupportedPython()) {
+    //     std.debug.print("Unsupported Python version: {}.{}. Minimum supported version is {}.{}\n", .{ sysconfigEnv.version_major, sysconfigEnv.version_minor, Version.MINIMUM_SUPPORTED_VERSION_PYTHON.major, Version.MINIMUM_SUPPORTED_VERSION_PYTHON.minor });
+    //     @panic("Unsupported Python version");
+    // }
 
     const libname = if (builtin.os.tag == .windows) try PyLibName.getWindows(
         allocator,
