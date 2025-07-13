@@ -72,7 +72,7 @@ jobs:
         run: pdm install -d
 
       - name: Run build check
-        run: uv run -m ziglang build check
+        run: uv run -m ziglang build check -Dabi3=true
 
   build:
     needs: [lint, check]
