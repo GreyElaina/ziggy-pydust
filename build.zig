@@ -49,6 +49,7 @@ pub fn build(b: *std.Build) void {
     pyconf.addOption([:0]const u8, "module_name", "test");
     pyconf.addOption(bool, "limited_api", abi3);
     pyconf.addOption([]const u8, "hexversion", interpreter_config.hexversion);
+    pyconf.addOption(std.SemanticVersion, "runtime_version", interpreter_config.version);
 
     // We never build this lib, but we use it to generate docs.
     const pydust_lib = b.addSharedLibrary(.{

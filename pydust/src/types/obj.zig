@@ -13,6 +13,7 @@
 const std = @import("std");
 const ffi = @import("ffi");
 const py = @import("../pydust.zig");
+const pyconf = @import("pyconf");
 const PyError = @import("../errors.zig").PyError;
 const State = @import("../discovery.zig").State;
 
@@ -40,7 +41,11 @@ pub const PyObject = extern struct {
 
     pub fn getTypeName(self: Self) ![:0]const u8 {
         const pytype: *ffi.PyObject = ffi.PyObject_Type(self.py) orelse return PyError.PyRaised;
-        const name = py.PyString.from.unchecked(.{ .py = ffi.PyType_GetName(@ptrCast(pytype)) orelse return PyError.PyRaised });
+        defer ffi.Py_DECREF(pytype);
+        // PyType_GetName is only available since Python 3.11
+        // For compatibility with Python 3.10, we use PyObject_GetAttrString to get __name__
+        const nameObj = ffi.PyObject_GetAttrString(pytype, "__name__") orelse return PyError.PyRaised;
+        const name = py.PyString.from.unchecked(.{ .py = nameObj });
         return name.asSlice();
     }
 
@@ -75,17 +80,22 @@ pub const PyObject = extern struct {
     }
 
     // See: https://docs.python.org/3/c-api/buffer.html#buffer-request-types
-    pub fn getBuffer(self: py.PyObject, comptime root: type, flags: c_int) !py.PyBuffer {
-        if (ffi.PyObject_CheckBuffer(self.py) != 1) {
-            return py.BufferError(root).raise("object does not support buffer interface");
-        }
-        var buffer: py.PyBuffer = undefined;
-        if (ffi.PyObject_GetBuffer(self.py, @ptrCast(&buffer), flags) != 0) {
-            // Error is already raised.
-            return PyError.PyRaised;
-        }
-        return buffer;
-    }
+    pub const getBuffer = if (pyconf.runtime_version.order(.{ .major = 3, .minor = 11, .patch = 0 }) != .lt)
+        struct {
+            pub fn getBuffer(self: py.PyObject, comptime root: type, flags: c_int) !py.PyBuffer {
+                if (ffi.PyObject_CheckBuffer(self.py) != 1) {
+                    return py.BufferError(root).raise("object does not support buffer interface");
+                }
+                var buffer: py.PyBuffer = undefined;
+                if (ffi.PyObject_GetBuffer(self.py, @ptrCast(&buffer), flags) != 0) {
+                    // Error is already raised.
+                    return PyError.PyRaised;
+                }
+                return buffer;
+            }
+        }.getBuffer
+    else
+        void;
 
     pub fn set(self: Self, attr: []const u8, value: Self) !Self {
         const attrStr = try py.PyString.create(attr);

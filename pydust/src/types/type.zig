@@ -27,15 +27,17 @@ pub const PyType = extern struct {
     pub const from = PyObjectMixin("type", "PyType", Self);
 
     pub fn name(self: Self) !py.PyString {
-        return py.PyString.from.unchecked(.{
-            .py = ffi.PyType_GetName(typePtr(self)) orelse return PyError.PyRaised,
-        });
+        // PyType_GetName is only available since Python 3.11
+        // For compatibility with Python 3.10, we use PyObject_GetAttrString to get __name__
+        const nameObj = ffi.PyObject_GetAttrString(objPtr(typePtr(self)), "__name__") orelse return PyError.PyRaised;
+        return py.PyString.from.unchecked(.{ .py = nameObj });
     }
 
     pub fn qualifiedName(self: Self) !py.PyString {
-        return py.PyString.from.unchecked(.{
-            .py = ffi.PyType_GetQualName(typePtr(self)) orelse return PyError.PyRaised,
-        });
+        // PyType_GetQualName is only available since Python 3.11
+        // For compatibility with Python 3.10, we use PyObject_GetAttrString to get __qualname__
+        const qualnameObj = ffi.PyObject_GetAttrString(objPtr(typePtr(self)), "__qualname__") orelse return PyError.PyRaised;
+        return py.PyString.from.unchecked(.{ .py = qualnameObj });
     }
 
     pub fn getSlot(self: Self, slot: c_int) ?*anyopaque {

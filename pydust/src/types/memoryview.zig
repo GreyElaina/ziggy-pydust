@@ -16,6 +16,7 @@ const PyObjectMixin = @import("./obj.zig").PyObjectMixin;
 const ffi = py.ffi;
 const PyError = @import("../errors.zig").PyError;
 const State = @import("../discovery.zig").State;
+const pyconf = @import("pyconf");
 
 pub const PyMemoryView = extern struct {
     obj: py.PyObject,
@@ -72,10 +73,12 @@ test "from array" {
     const mv = try PyMemoryView.fromSlice(array);
     defer mv.obj.decref();
 
-    const root = @This();
-    var buf = try mv.obj.getBuffer(root, py.PyBuffer.Flags.ANY_CONTIGUOUS);
-    try std.testing.expectEqualSlices(u8, array, buf.asSlice(u8));
-    try std.testing.expect(buf.readonly);
+    if (comptime pyconf.runtime_version.order(.{ .major = 3, .minor = 11, .patch = 0 }) != .lt) {
+        const root = @This();
+        var buf = try mv.obj.getBuffer(root, py.PyBuffer.Flags.ANY_CONTIGUOUS);
+        try std.testing.expectEqualSlices(u8, array, buf.asSlice(u8));
+        try std.testing.expect(buf.readonly);
+    }
 }
 
 test "from slice" {
@@ -88,10 +91,12 @@ test "from slice" {
     const mv = try PyMemoryView.fromSlice(slice);
     defer mv.obj.decref();
 
-    const root = @This();
-    var buf = try mv.obj.getBuffer(root, py.PyBuffer.Flags.ANY_CONTIGUOUS);
-    try std.testing.expectEqualSlices(u8, array, buf.asSlice(u8));
-    try std.testing.expect(buf.readonly);
+    if (comptime pyconf.runtime_version.order(.{ .major = 3, .minor = 11, .patch = 0 }) != .lt) {
+        const root = @This();
+        var buf = try mv.obj.getBuffer(root, py.PyBuffer.Flags.ANY_CONTIGUOUS);
+        try std.testing.expectEqualSlices(u8, array, buf.asSlice(u8));
+        try std.testing.expect(buf.readonly);
+    }
 }
 
 test "from mutable slice" {
@@ -105,8 +110,10 @@ test "from mutable slice" {
     defer mv.obj.decref();
     @memcpy(slice, array);
 
-    const root = @This();
-    var buf = try mv.obj.getBuffer(root, py.PyBuffer.Flags.ANY_CONTIGUOUS);
-    try std.testing.expectEqualSlices(u8, array, buf.asSlice(u8));
-    try std.testing.expect(!buf.readonly);
+    if (comptime pyconf.runtime_version.order(.{ .major = 3, .minor = 11, .patch = 0 }) != .lt) {
+        const root = @This();
+        var buf = try mv.obj.getBuffer(root, py.PyBuffer.Flags.ANY_CONTIGUOUS);
+        try std.testing.expectEqualSlices(u8, array, buf.asSlice(u8));
+        try std.testing.expect(!buf.readonly);
+    }
 }

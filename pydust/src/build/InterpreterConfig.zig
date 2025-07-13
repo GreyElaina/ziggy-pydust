@@ -14,13 +14,14 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
+const SemanticVersion = std.SemanticVersion;
 
 const Self = @This();
 
 allocator: std.mem.Allocator,
 
 implementation: Implementation,
-version: Version,
+version: SemanticVersion,
 shared: bool,
 abi3: bool,
 
@@ -54,49 +55,43 @@ pub const Implementation = enum {
     }
 };
 
-pub const Version = struct {
-    major: u8,
-    minor: u8,
+pub const Version = SemanticVersion;
 
-    const PY37 = Version{ .major = 3, .minor = 7 };
-    const PY313 = Version{ .major = 3, .minor = 13 };
-    const PY310 = Version{ .major = 3, .minor = 10 };
+const PY37 = SemanticVersion{ .major = 3, .minor = 7, .patch = 0 };
+const PY313 = SemanticVersion{ .major = 3, .minor = 13, .patch = 0 };
+const PY310 = SemanticVersion{ .major = 3, .minor = 10, .patch = 0 };
 
-    const MINIMUM_SUPPORTED_VERSION_GRAALPY = Version{
-        .major = 24,
-        .minor = 0,
-    };
-    const MINIMUM_SUPPORTED_VERSION_PYTHON = Version{
-        .major = 3,
-        .minor = 11,
-    };
-
-    pub fn parse(s: []const u8) !Version {
-        const parts = std.mem.splitScalar(u8, s, '.');
-        if (parts.len != 2) return error.InvalidVersionFormat;
-
-        const major = std.fmt.parseInt(u8, parts[0], 10) catch unreachable;
-        const minor = std.fmt.parseInt(u8, parts[1], 10) catch unreachable;
-
-        return Version{ .major = major, .minor = minor };
-    }
-
-    pub fn cmp(self: Version, other: Version) i2 {
-        if (self.major < other.major) return -1;
-        if (self.major > other.major) return 1;
-        if (self.minor < other.minor) return -1;
-        if (self.minor > other.minor) return 1;
-        return 0;
-    }
-
-    pub fn isSupportedPython(self: Version) bool {
-        return self.cmp(MINIMUM_SUPPORTED_VERSION_PYTHON) >= 0;
-    }
-
-    pub fn isSupportedGraalPy(self: Version) bool {
-        return self.cmp(MINIMUM_SUPPORTED_VERSION_GRAALPY) >= 0;
-    }
+const MINIMUM_SUPPORTED_VERSION_GRAALPY = SemanticVersion{
+    .major = 24,
+    .minor = 0,
+    .patch = 0,
 };
+const MINIMUM_SUPPORTED_VERSION_PYTHON = SemanticVersion{
+    .major = 3,
+    .minor = 11,
+    .patch = 0,
+};
+
+pub fn parseVersion(s: []const u8) !SemanticVersion {
+    const parts = std.mem.splitScalar(u8, s, '.');
+    var it = parts;
+    const major_str = it.first();
+    const minor_str = it.next() orelse return error.InvalidVersionFormat;
+    if (it.next() != null) return error.InvalidVersionFormat;
+
+    const major = std.fmt.parseInt(usize, major_str, 10) catch return error.InvalidVersionFormat;
+    const minor = std.fmt.parseInt(usize, minor_str, 10) catch return error.InvalidVersionFormat;
+
+    return SemanticVersion{ .major = major, .minor = minor, .patch = 0 };
+}
+
+pub fn isSupportedPython(version: SemanticVersion) bool {
+    return version.order(MINIMUM_SUPPORTED_VERSION_PYTHON) != .lt;
+}
+
+pub fn isSupportedGraalPy(version: SemanticVersion) bool {
+    return version.order(MINIMUM_SUPPORTED_VERSION_GRAALPY) != .lt;
+}
 
 const sysconfigRevealScript = @embedFile("reveal_sysconfig.py");
 
@@ -153,26 +148,33 @@ pub fn fromInterpreter(
     const sysconfigEnv = sysconfigEnvParsed.value;
     if (sysconfigEnv.graalpy_major) |graalpy_major| {
         const graalpy_minor = sysconfigEnv.graalpy_minor orelse unreachable;
-        const graalpy_version = Version{
+        const graalpy_version = SemanticVersion{
             .major = graalpy_major,
             .minor = graalpy_minor,
+            .patch = 0,
         };
-        if (!graalpy_version.isSupportedGraalPy()) {
-            std.debug.print("Unsupported GraalPy version: {}.{}. Minimum supported version is {}.{}\n", .{ graalpy_major, graalpy_minor, Version.MINIMUM_SUPPORTED_VERSION_GRAALPY.major, Version.MINIMUM_SUPPORTED_VERSION_GRAALPY.minor });
+        if (!isSupportedGraalPy(graalpy_version)) {
+            std.debug.print("Unsupported GraalPy version: {}.{}. Minimum supported version is {}.{}\n", .{ graalpy_major, graalpy_minor, MINIMUM_SUPPORTED_VERSION_GRAALPY.major, MINIMUM_SUPPORTED_VERSION_GRAALPY.minor });
             @panic("Unsupported GraalPy version");
         }
     }
 
-    const python_version = Version{
+    const python_version = SemanticVersion{
         .major = sysconfigEnv.version_major,
         .minor = sysconfigEnv.version_minor,
+        .patch = 0,
     };
     const implementation = try Implementation.parse(sysconfigEnv.implementation);
 
-    // if (!python_version.isSupportedPython()) {
-    //     std.debug.print("Unsupported Python version: {}.{}. Minimum supported version is {}.{}\n", .{ sysconfigEnv.version_major, sysconfigEnv.version_minor, Version.MINIMUM_SUPPORTED_VERSION_PYTHON.major, Version.MINIMUM_SUPPORTED_VERSION_PYTHON.minor });
+    // if (!isSupportedPython(python_version)) {
+    //     std.debug.print("Unsupported Python version: {}.{}. Minimum supported version is {}.{}\n", .{ sysconfigEnv.version_major, sysconfigEnv.version_minor, MINIMUM_SUPPORTED_VERSION_PYTHON.major, MINIMUM_SUPPORTED_VERSION_PYTHON.minor });
     //     @panic("Unsupported Python version");
     // }
+
+    if (python_version.order(SemanticVersion{ .major = 3, .minor = 12, .patch = 0 }) != .lt and !abi3) {
+        std.debug.print("Unsupported Python without ABI3: {}.{}; Maximum supported version is 3.11\n", .{python_version.major, python_version.minor});
+        @panic("Unsupported Python version");
+    }
 
     const libname = if (builtin.os.tag == .windows) try PyLibName.getWindows(
         allocator,
@@ -274,7 +276,7 @@ pub const PyLibName = union(enum) {
 
     pub fn getWindows(
         allocator: std.mem.Allocator,
-        version: Version,
+        version: SemanticVersion,
         implementation: Implementation,
         abi3: bool,
         mingw: bool,
@@ -286,7 +288,7 @@ pub const PyLibName = union(enum) {
 
     pub fn getUnix(
         allocator: std.mem.Allocator,
-        version: Version,
+        version: SemanticVersion,
         implementation: Implementation,
         ld_version: ?[]const u8,
         gil_disabled: bool,
@@ -297,14 +299,14 @@ pub const PyLibName = union(enum) {
 
 fn getLibnameWindows(
     allocator: std.mem.Allocator,
-    version: Version,
+    version: SemanticVersion,
     implementation: Implementation,
     abi3: bool,
     mingw: bool,
     debug: bool,
     gil_disabled: bool,
 ) !PyLibName {
-    if (debug and version.cmp(Version.PY310) < 0) {
+    if (debug and version.order(PY310) == .lt) {
         // CPython bug: linking against python3_d.dll raises error
         // https://github.com/python/cpython/issues/101614
         // return "python" ++ version.major ++ version.minor ++ "_d";  // => python{}{}_d
@@ -331,7 +333,7 @@ fn getLibnameWindows(
         return PyLibName.fromDynamic(name);
     }
     if (gil_disabled) {
-        if (version.cmp(Version.PY313) < 0) @panic("Cannot compile C extensions for the free-threaded build on Python versions earlier than 3.13");
+        if (version.order(PY313) == .lt) @panic("Cannot compile C extensions for the free-threaded build on Python versions earlier than 3.13");
         const name = if (debug)
             try std.fmt.allocPrint(
                 allocator,
@@ -363,7 +365,7 @@ fn getLibnameWindows(
 
 fn getLibnameUnix(
     allocator: std.mem.Allocator,
-    version: Version,
+    version: SemanticVersion,
     implementation: Implementation,
     ld_version: ?[]const u8,
     gil_disabled: bool,
@@ -375,10 +377,10 @@ fn getLibnameUnix(
                 return PyLibName.fromDynamic(name);
             }
 
-            // if (version.isHigherThan(Version.PY37)) {
-            if (version.cmp(Version.PY37) > 0) {
+            // if (version.isHigherThan(PY37)) {
+            if (version.order(PY37) == .gt) {
                 if (gil_disabled) {
-                    if (version.cmp(Version.PY313) < 0) @panic("Cannot compile C extensions for the free-threaded build on Python versions earlier than 3.13");
+                    if (version.order(PY313) == .lt) @panic("Cannot compile C extensions for the free-threaded build on Python versions earlier than 3.13");
                     const name = try std.fmt.allocPrint(
                         allocator,
                         "python{d}.{d}t",

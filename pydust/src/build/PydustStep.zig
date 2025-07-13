@@ -101,6 +101,7 @@ pub fn addPythonModule(self: *Self, options: PyModuleOptions) PyModule {
     pyconf.addOption([:0]const u8, "module_name", options.name);
     pyconf.addOption(bool, "limited_api", options.abi3);
     pyconf.addOption([]const u8, "hexversion", self.interpreter_config.hexversion);
+    pyconf.addOption(InterpreterConfig.Version, "runtime_version", self.interpreter_config.version);
 
     const translate_c = self.addTranslateC(options);
     translate_c.addIncludePath(LazyPath{ .cwd_relative = self.interpreter_config.include_dir });
