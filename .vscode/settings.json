@@ -68,4 +68,5 @@
             "end": "\"\"\"",
         }
     ],
+    "zig.zls.enableBuildOnSave": true,
 }

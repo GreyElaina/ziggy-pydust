@@ -60,8 +60,6 @@ pub fn build(b: *std.Build) void {
     pydust_lib.root_module.addImport("ffi", translate_c.createModule());
     pydust_lib.root_module.addImport("pyconf", pyconf.createModule());
 
-    check_step.dependOn(&pydust_lib.step);
-
     const pydust_docs = b.addInstallDirectory(.{
         .source_dir = pydust_lib.getEmittedDocs(),
         // Emit the Zig docs into zig-out/../docs/zig
@@ -85,6 +83,8 @@ pub fn build(b: *std.Build) void {
     main_tests.root_module.addImport("ffi", translate_c.createModule());
     main_tests.root_module.addImport("pyconf", pyconf.createModule());
     // main_tests.root_module.addImport("pydust", pydust_lib.root_module);
+
+    check_step.dependOn(&main_tests.step);
 
     const run_main_tests = b.addRunArtifact(main_tests);
     test_step.dependOn(&run_main_tests.step);
