@@ -171,10 +171,11 @@ pub fn fromInterpreter(
     //     @panic("Unsupported Python version");
     // }
 
-    if (python_version.order(SemanticVersion{ .major = 3, .minor = 12, .patch = 0 }) != .lt and !abi3) {
-        std.debug.print("Unsupported Python without ABI3: {}.{}; Maximum supported version is 3.11\n", .{python_version.major, python_version.minor});
-        @panic("Unsupported Python version");
-    }
+    // if (python_version.order(SemanticVersion{ .major = 3, .minor = 12, .patch = 0 }) != .lt and !abi3) {
+    //     // https://github.com/ziglang/zig/issues/1499
+    //     std.debug.print("Unsupported Python without ABI3: {}.{}; Maximum supported version is 3.11\n", .{ python_version.major, python_version.minor });
+    //     @panic("Unsupported Python version");
+    // }
 
     const libname = if (builtin.os.tag == .windows) try PyLibName.getWindows(
         allocator,

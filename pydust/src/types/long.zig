@@ -71,6 +71,8 @@ test "PyLong" {
     const neg_pl = try PyLong.create(@as(c_long, -100));
     defer neg_pl.obj.decref();
 
+    // Outputs on stderr: OverflowError, "Python int too large to convert to C long"
+    // expected behavior: return an error.
     try std.testing.expectError(
         PyError.PyRaised,
         neg_pl.as(c_ulong),
