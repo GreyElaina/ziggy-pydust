@@ -17,8 +17,8 @@
     .minimum_zig_version = "0.15.0-dev.936+fc2c1883b",
     .dependencies = .{
         .translate_c = .{
-            .url = "git+https://github.com/elaina-forge/translate-c?ref=HEAD#8be350bf856e848fa5f2ce507dadb8d7e2b43dd0",
-            .hash = "translate_c-0.0.0-Q_BUWgveBgA7FoNJDJdum9rJmvVt_Zh3Vmor_0SSBMBT",
+            .url = "git+https://github.com/elaina-forge/translate-c?ref=HEAD#96db1139b3431fb4c3da457bcd8184fa2c2785ce",
+            .hash = "translate_c-0.0.0-Q_BUWqqiBgD4_wYZa-fYm-j9baDLNae8D-UQ44qsaCNd",
         },
     },
     .paths = .{

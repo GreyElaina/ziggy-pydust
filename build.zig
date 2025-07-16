@@ -55,7 +55,12 @@ pub fn build(b: *std.Build) void {
 
     const options: PydustStep.PyModuleOptions = .{
         .name = "pydust",
-        .root_source_file = b.path("pydust/src/pydust.zig"),
+        // .root_source_file = b.path("pydust/src/pydust.zig"),
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = LazyPath{ .cwd_relative = interpreter_config.pydust_root_zig },
+        }),
         .target = target,
         .optimize = optimize,
         .main_pkg_path = null,
@@ -153,7 +158,8 @@ pub const PydustStep = struct {
 
     pub const PyModuleOptions = struct {
         name: [:0]const u8,
-        root_source_file: LazyPath,
+        // root_source_file: LazyPath,
+        root_module: *std.Build.Module,
         target: std.Build.ResolvedTarget,
         optimize: std.builtin.Mode,
         main_pkg_path: ?LazyPath = null,
@@ -169,7 +175,8 @@ pub const PydustStep = struct {
     };
 
     pub const PyModule = struct {
-        library_step: *Step.Compile,
+        root_module: *std.Build.Module,
+        library: *Step.Compile,
         test_step: *Step.Compile,
     };
 
@@ -245,25 +252,19 @@ pub const PydustStep = struct {
         });
         pydust.addIncludePath(LazyPath{ .cwd_relative = self.interpreter_config.include_dir });
 
-        const py_module = b.addLibrary(.{
+        options.root_module.addImport("pyconf", pyconf.createModule());
+        options.root_module.addImport("pydust", pydust);
+
+        const library = b.addLibrary(.{
             .name = short_name,
-            // .root_source_file = options.root_source_file,
-            .root_module = b.createModule(.{
-                .target = options.target,
-                .optimize = options.optimize,
-                .root_source_file = options.root_source_file,
-                .imports = &.{
-                    .{ .name = "pyconf", .module = pyconf.createModule() },
-                    .{ .name = "pydust", .module = pydust },
-                },
-            }),
+            .root_module = options.root_module,
             .linkage = .dynamic,
         });
-        py_module.linkLibC();
-        py_module.linker_allow_shlib_undefined = true;
+        library.linkLibC();
+        library.linker_allow_shlib_undefined = true;
 
         const install = b.addInstallFileWithDir(
-            py_module.getEmittedBin(),
+            library.getEmittedBin(),
             .{ .custom = ".." }, // Project root, zig-out/../
             self.pyModuleDestRelPath(b.allocator, options) catch @panic("Out of memory"),
         );
@@ -279,18 +280,7 @@ pub const PydustStep = struct {
         });
         libtest_mod.addIncludePath(LazyPath{ .cwd_relative = self.interpreter_config.include_dir });
 
-        const libtest = b.addTest(.{
-            // .root_source_file = options.root_source_file,
-            .root_module = b.createModule(.{
-                .target = options.target,
-                .optimize = options.optimize,
-                .root_source_file = LazyPath{ .cwd_relative = options.root_source_file.cwd_relative },
-                .imports = &.{
-                    .{ .name = "pyconf", .module = pyconf.createModule() },
-                    .{ .name = "pydust", .module = pydust },
-                },
-            }),
-        });
+        const libtest = b.addTest(.{ .root_module = options.root_module });
         libtest.linkLibC();
         libtest.linkSystemLibrary(self.interpreter_config.libname.str());
         libtest.addLibraryPath(LazyPath{ .cwd_relative = self.interpreter_config.libdir.? });
@@ -308,7 +298,8 @@ pub const PydustStep = struct {
         }
 
         return .{
-            .library_step = py_module,
+            .root_module = options.root_module,
+            .library = library,
             .test_step = libtest,
         };
     }
