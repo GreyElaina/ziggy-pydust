@@ -8,7 +8,7 @@ authors = [
     {name = "Nicholas Gates", email = "nick@fulcrum.so"},
 ]
 license = {text = "Apache 2.0"}
-requires-python = "<4.0,>=3.10"
+requires-python = "<4.0,>=3.11"
 dependencies = [
     "ziglang<1.0.0,>=0.14.0",
     "pydantic<3.0.0,>=2.3.0",

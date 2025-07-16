@@ -145,7 +145,7 @@ pub fn build(b: *std.Build) void {
     // This is used for debugging as in .vscode/tasks.json
     const test_debug_root = b.option([]const u8, "test-debug-root", "The root path of a file emitted as a binary for use with the debugger");
     if (test_debug_root) |root| {
-        main_tests.root_module.root_source_file = b.path(root);
+        main_tests.root_module.root_source_file = LazyPath{ .cwd_relative = root };
         const test_bin_install = b.addInstallBinFile(main_tests.getEmittedBin(), "test.bin");
         b.getInstallStep().dependOn(&test_bin_install.step);
     }

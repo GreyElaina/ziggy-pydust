@@ -3,13 +3,14 @@
     "tasks": [
         {
             "label": "zig-test-bin",
-            "command": "zig",
+            "command": "/Users/elaina/Library/Application Support/Code/User/globalStorage/ziglang.vscode-zig/zig/aarch64-macos-0.15.0-dev.936+fc2c1883b/zig",
             "args": [
                 "build",
-                "-Dtest-debug-root=${file}"
+                "-Dtest-debug-root=pydust/src/pydust.zig",
+                "-Dpython-exe=/opt/homebrew/bin/python3.10",
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}",
             },
             "type": "shell"
         },
